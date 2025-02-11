@@ -5,24 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conversión de GLB a USDZ</title>
 
-    <!-- Cargar Three.js desde un CDN confiable -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Cargar Three.js y sus módulos correctamente desde un CDN -->
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.136.0/build/three.module.js';
+        import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.136.0/examples/jsm/loaders/GLTFLoader.js';
+        import { USDZExporter } from 'https://cdn.jsdelivr.net/npm/three@0.136.0/examples/jsm/exporters/USDZExporter.js';
 
-    <!-- Cargar GLTFLoader y USDZExporter correctamente -->
-    <script src="https://threejs.org/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://threejs.org/examples/js/exporters/USDZExporter.js"></script>
-</head>
-<body>
-    <h1>Conversión de GLB a USDZ</h1>
-    <p>Selecciona un archivo GLB y conviértelo a USDZ</p>
-
-    <div>
-        <input type="file" id="glb-file" accept=".glb">
-        <button onclick="convertToUSDZ()">Convertir a USDZ</button>
-    </div>
-
-    <script>
-        function convertToUSDZ() {
+        window.convertToUSDZ = function() {
             const fileInput = document.getElementById('glb-file');
             const file = fileInput.files[0];
 
@@ -35,19 +24,11 @@
             reader.onload = function(event) {
                 console.log("Archivo GLB cargado correctamente.");
 
-                // Verificamos si GLTFLoader está disponible
-                if (!THREE.GLTFLoader) {
-                    console.error("GLTFLoader no está definido correctamente.");
-                    alert("Error: GLTFLoader no cargado. Revisa la consola.");
-                    return;
-                }
-
-                const loader = new THREE.GLTFLoader();
+                const loader = new GLTFLoader();
                 loader.parse(event.target.result, '', function(gltf) {
                     const scene = gltf.scene;
 
                     console.log("GLB cargado en la escena.");
-
                     exportUSDZ(scene);
                 }, function(error) {
                     console.error("Error al cargar GLB:", error);
@@ -55,11 +36,11 @@
             };
 
             reader.readAsArrayBuffer(file);
-        }
+        };
 
         function exportUSDZ(model) {
             console.log("Iniciando exportación a USDZ...");
-            const exporter = new THREE.USDZExporter();
+            const exporter = new USDZExporter();
 
             exporter.parse(model).then(function(arraybuffer) {
                 console.log("USDZ exportado correctamente.");
@@ -83,6 +64,19 @@
                 alert("Error al convertir a USDZ. Revisa la consola.");
             });
         }
+
+        // Asegurar que convertToUSDZ sea accesible globalmente
+        window.exportUSDZ = exportUSDZ;
+
     </script>
+</head>
+<body>
+    <h1>Conversión de GLB a USDZ</h1>
+    <p>Selecciona un archivo GLB y conviértelo a USDZ</p>
+
+    <div>
+        <input type="file" id="glb-file" accept=".glb">
+        <button onclick="convertToUSDZ()">Convertir a USDZ</button>
+    </div>
 </body>
 </html>
