@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversión de GLB a USDZ</title>
+
+    <!-- Cargar Three.js desde un CDN confiable -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Cargar GLTFLoader y USDZExporter desde Three.js examples -->
+    <script src="https://threejs.org/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://threejs.org/examples/js/exporters/USDZExporter.js"></script>
+</head>
+<body>
+    <h1>Conversión de GLB a USDZ</h1>
+    <p>Selecciona un archivo GLB y conviértelo a USDZ</p>
+
+    <div>
+        <input type="file" id="glb-file" accept=".glb">
+        <button onclick="convertToUSDZ()">Convertir a USDZ</button>
+    </div>
+
+    <script>
+        function convertToUSDZ() {
+            const fileInput = document.getElementById('glb-file');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert("Por favor, selecciona un archivo GLB.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                console.log("Archivo GLB cargado correctamente.");
+
+                // Comprobamos que GLTFLoader está disponible
+                if (!THREE.GLTFLoader) {
+                    console.error("GLTFLoader no está definido correctamente.");
+                    alert("Error al cargar GLTFLoader. Revisa la consola.");
+                    return;
+                }
+
+                const loader = new THREE.GLTFLoader();
+                loader.parse(event.target.result, '', function(gltf) {
+                    const scene = gltf.scene;
+
+                    console.log("GLB cargado en la escena.");
+
+                    exportUSDZ(scene);
+                });
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        function exportUSDZ(model) {
+            console.log("Iniciando exportación a USDZ...");
+            const exporter = new THREE.USDZExporter();
+
+            exporter.parse(model).then(function(arraybuffer) {
+                console.log("USDZ exportado correctamente.");
+
+                const blob = new Blob([arraybuffer], { type: "model/vnd.usdz+zip" });
+                const url = URL.createObjectURL(blob);
+
+                console.log("URL del archivo USDZ generado:", url);
+
+                // Crear un enlace de descarga
+                const downloadLink = document.createElement('a');
+                downloadLink.href = url;
+                downloadLink.download = 'modelo_convertido.usdz';
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+
+                alert("Modelo USDZ exportado y descargado correctamente.");
+            }).catch(function(error) {
+                console.error("Error al exportar a USDZ:", error);
+                alert("Error al convertir a USDZ. Revisa la consola.");
+            });
+        }
+    </script>
+</body>
+</html>
