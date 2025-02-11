@@ -8,20 +8,14 @@
     <!-- Cargar Three.js desde un CDN confiable -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <!-- Cargar GLTFLoader y USDZExporter desde un CDN confiable -->
+    <!-- Cargar fflate.js (requerido por USDZExporter) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fflate/0.7.4/fflate.min.js"></script>
+
+    <!-- Cargar GLTFLoader y USDZExporter -->
     <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three/examples/js/exporters/USDZExporter.js"></script>
 
     <script>
-        // Verificar si GLTFLoader está disponible después de cargar los scripts
-        document.addEventListener("DOMContentLoaded", function () {
-            if (typeof THREE.GLTFLoader === "undefined") {
-                console.error("GLTFLoader no está definido. Asegúrate de que el script se cargó correctamente.");
-            } else {
-                console.log("GLTFLoader cargado correctamente.");
-            }
-        });
-
         function convertToUSDZ() {
             const fileInput = document.getElementById('glb-file');
             const file = fileInput.files[0];
@@ -35,17 +29,18 @@
             reader.onload = function(event) {
                 console.log("Archivo GLB cargado correctamente.");
 
-                // Verificar si GLTFLoader está disponible antes de usarlo
-                if (typeof THREE.GLTFLoader === "undefined") {
-                    console.error("GLTFLoader no está definido correctamente.");
-                    alert("Error: GLTFLoader no cargado. Revisa la consola.");
-                    return;
-                }
-
                 const loader = new THREE.GLTFLoader();
                 loader.parse(event.target.result, '', function(gltf) {
                     const scene = gltf.scene;
                     console.log("GLB cargado en la escena.");
+
+                    // Verificar si el modelo tiene coordenadas UV
+                    scene.traverse((child) => {
+                        if (child.isMesh && !child.geometry.attributes.uv) {
+                            console.warn("El modelo no tiene coordenadas UV, lo que puede afectar la conversión a USDZ.");
+                        }
+                    });
+
                     exportUSDZ(scene);
                 }, function(error) {
                     console.error("Error al cargar GLB:", error);
