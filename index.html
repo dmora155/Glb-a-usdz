@@ -8,20 +8,20 @@
     <!-- Cargar Three.js desde un CDN confiable -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <!-- Cargar GLTFLoader y USDZExporter correctamente -->
-    <script src="https://threejs.org/examples/js/loaders/GLTFLoader.js"></script>
-    <script src="https://threejs.org/examples/js/exporters/USDZExporter.js"></script>
-</head>
-<body>
-    <h1>Conversión de GLB a USDZ</h1>
-    <p>Selecciona un archivo GLB y conviértelo a USDZ</p>
-
-    <div>
-        <input type="file" id="glb-file" accept=".glb">
-        <button onclick="convertToUSDZ()">Convertir a USDZ</button>
-    </div>
+    <!-- Cargar GLTFLoader y USDZExporter desde un CDN confiable -->
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three/examples/js/exporters/USDZExporter.js"></script>
 
     <script>
+        // Verificar si GLTFLoader está disponible después de cargar los scripts
+        document.addEventListener("DOMContentLoaded", function () {
+            if (typeof THREE.GLTFLoader === "undefined") {
+                console.error("GLTFLoader no está definido. Asegúrate de que el script se cargó correctamente.");
+            } else {
+                console.log("GLTFLoader cargado correctamente.");
+            }
+        });
+
         function convertToUSDZ() {
             const fileInput = document.getElementById('glb-file');
             const file = fileInput.files[0];
@@ -35,8 +35,8 @@
             reader.onload = function(event) {
                 console.log("Archivo GLB cargado correctamente.");
 
-                // Verificamos si GLTFLoader está disponible
-                if (!THREE.GLTFLoader) {
+                // Verificar si GLTFLoader está disponible antes de usarlo
+                if (typeof THREE.GLTFLoader === "undefined") {
                     console.error("GLTFLoader no está definido correctamente.");
                     alert("Error: GLTFLoader no cargado. Revisa la consola.");
                     return;
@@ -45,7 +45,6 @@
                 const loader = new THREE.GLTFLoader();
                 loader.parse(event.target.result, '', function(gltf) {
                     const scene = gltf.scene;
-
                     console.log("GLB cargado en la escena.");
                     exportUSDZ(scene);
                 }, function(error) {
@@ -83,5 +82,14 @@
             });
         }
     </script>
+</head>
+<body>
+    <h1>Conversión de GLB a USDZ</h1>
+    <p>Selecciona un archivo GLB y conviértelo a USDZ</p>
+
+    <div>
+        <input type="file" id="glb-file" accept=".glb">
+        <button onclick="convertToUSDZ()">Convertir a USDZ</button>
+    </div>
 </body>
 </html>
