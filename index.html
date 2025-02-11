@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <!-- Cargar dependencias necesarias -->
-    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.js"></script> <!-- Soluciona el error de fflate -->
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.js"></script> <!-- Corrige error de fflate -->
 
     <!-- Cargar GLTFLoader y USDZExporter -->
     <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
@@ -35,6 +35,7 @@
                     console.log("GLB cargado en la escena.");
 
                     ensureUVs(scene); // Generar UVs si faltan
+                    applyScaleToGeometry(scene); // Aplicar la escala de forma permanente
                     exportUSDZ(scene);
                 }, function(error) {
                     console.error("Error al cargar GLB:", error);
@@ -59,11 +60,28 @@
             });
         }
 
+        function applyScaleToGeometry(model) {
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    const scale = model.scale; // Obtener la escala aplicada
+                    console.log("Aplicando escala permanente:", scale);
+
+                    // Aplicar la escala a los vértices de la geometría
+                    child.geometry.applyMatrix4(new THREE.Matrix4().makeScale(scale.x, scale.y, scale.z));
+
+                    // Resetear la escala del modelo a 1, ya que ahora los vértices están escalados
+                    child.scale.set(1, 1, 1);
+                }
+            });
+        }
+
         function exportUSDZ(model) {
             console.log("Iniciando exportación a USDZ...");
-            const exporter = new THREE.USDZExporter();
 
-            exporter.parse(model).then(function(arraybuffer) {
+            applyScaleToGeometry(model); // Asegurar que la escala es parte de la geometría antes de exportar
+
+            const exporter = new THREE.USDZExporter();
+            exporter.parse(model).then(function (arraybuffer) {
                 console.log("USDZ exportado correctamente.");
 
                 const blob = new Blob([arraybuffer], { type: "model/vnd.usdz+zip" });
@@ -71,15 +89,15 @@
 
                 console.log("URL del archivo USDZ generado:", url);
 
-                const downloadLink = document.createElement('a');
+                const downloadLink = document.createElement("a");
                 downloadLink.href = url;
-                downloadLink.download = 'modelo_convertido.usdz';
+                downloadLink.download = "modelo_convertido.usdz";
                 document.body.appendChild(downloadLink);
                 downloadLink.click();
                 document.body.removeChild(downloadLink);
 
                 alert("Modelo USDZ exportado y descargado correctamente.");
-            }).catch(function(error) {
+            }).catch(function (error) {
                 console.error("Error al exportar a USDZ:", error);
                 alert("Error al convertir a USDZ. Revisa la consola.");
             });
