@@ -8,7 +8,7 @@
     <!-- Cargar Three.js desde un CDN confiable -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <!-- Cargar GLTFLoader y USDZExporter desde Three.js examples -->
+    <!-- Cargar GLTFLoader y USDZExporter correctamente -->
     <script src="https://threejs.org/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://threejs.org/examples/js/exporters/USDZExporter.js"></script>
 </head>
@@ -35,10 +35,10 @@
             reader.onload = function(event) {
                 console.log("Archivo GLB cargado correctamente.");
 
-                // Comprobamos que GLTFLoader está disponible
+                // Verificamos si GLTFLoader está disponible
                 if (!THREE.GLTFLoader) {
                     console.error("GLTFLoader no está definido correctamente.");
-                    alert("Error al cargar GLTFLoader. Revisa la consola.");
+                    alert("Error: GLTFLoader no cargado. Revisa la consola.");
                     return;
                 }
 
@@ -49,6 +49,8 @@
                     console.log("GLB cargado en la escena.");
 
                     exportUSDZ(scene);
+                }, function(error) {
+                    console.error("Error al cargar GLB:", error);
                 });
             };
 
