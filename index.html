@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conversión de GLB a USDZ</title>
 
-    <!-- Cargar Three.js desde un CDN confiable -->
+    <!-- Cargar Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <!-- Cargar fflate.js (requerido por USDZExporter) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fflate/0.7.4/fflate.min.js"></script>
+    <!-- Cargar dependencias necesarias -->
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.js"></script> <!-- Soluciona el error de fflate -->
 
     <!-- Cargar GLTFLoader y USDZExporter -->
     <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
@@ -34,13 +34,7 @@
                     const scene = gltf.scene;
                     console.log("GLB cargado en la escena.");
 
-                    // Verificar si el modelo tiene coordenadas UV
-                    scene.traverse((child) => {
-                        if (child.isMesh && !child.geometry.attributes.uv) {
-                            console.warn("El modelo no tiene coordenadas UV, lo que puede afectar la conversión a USDZ.");
-                        }
-                    });
-
+                    ensureUVs(scene); // Generar UVs si faltan
                     exportUSDZ(scene);
                 }, function(error) {
                     console.error("Error al cargar GLB:", error);
@@ -48,6 +42,21 @@
             };
 
             reader.readAsArrayBuffer(file);
+        }
+
+        function ensureUVs(model) {
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    if (!child.geometry.attributes.uv) {
+                        console.warn("El modelo no tiene coordenadas UV. Generando UVs básicas...");
+                        const uvAttribute = new Float32Array(child.geometry.attributes.position.count * 2);
+                        for (let i = 0; i < uvAttribute.length; i++) {
+                            uvAttribute[i] = (i % 2 === 0) ? 0 : 1; // UVs básicas
+                        }
+                        child.geometry.setAttribute('uv', new THREE.BufferAttribute(uvAttribute, 2));
+                    }
+                }
+            });
         }
 
         function exportUSDZ(model) {
@@ -62,7 +71,6 @@
 
                 console.log("URL del archivo USDZ generado:", url);
 
-                // Crear un enlace de descarga
                 const downloadLink = document.createElement('a');
                 downloadLink.href = url;
                 downloadLink.download = 'modelo_convertido.usdz';
