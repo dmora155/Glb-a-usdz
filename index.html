@@ -35,8 +35,11 @@
                     console.log("GLB cargado en la escena.");
 
                     ensureUVs(scene); // Generar UVs si faltan
-                    applyScaleToGeometry(scene); // Aplicar la escala de forma permanente
-                    exportUSDZ(scene);
+
+                    const scaleFactor = detectUnitAndAdjustScale(scene);
+                    console.log(`Factor de escala aplicado: ${scaleFactor}`);
+
+                    exportUSDZ(scene, scaleFactor);
                 }, function(error) {
                     console.error("Error al cargar GLB:", error);
                 });
@@ -60,25 +63,32 @@
             });
         }
 
-        function applyScaleToGeometry(model) {
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    const scale = model.scale; // Obtener la escala aplicada
-                    console.log("Aplicando escala permanente:", scale);
+        function detectUnitAndAdjustScale(model) {
+            const boundingBox = new THREE.Box3().setFromObject(model);
+            const size = boundingBox.getSize(new THREE.Vector3());
+            console.log("Tamaño detectado del modelo (x, y, z):", size);
 
-                    // Aplicar la escala a los vértices de la geometría
-                    child.geometry.applyMatrix4(new THREE.Matrix4().makeScale(scale.x, scale.y, scale.z));
+            let scaleFactor = 1;
 
-                    // Resetear la escala del modelo a 1, ya que ahora los vértices están escalados
-                    child.scale.set(1, 1, 1);
-                }
-            });
+            if (size.y > 1000) {
+                console.log("El modelo está en MILÍMETROS. Convertimos a metros.");
+                scaleFactor = 0.001; // De mm a metros
+            } else if (size.y > 100) {
+                console.log("El modelo está en CENTÍMETROS. Convertimos a metros.");
+                scaleFactor = 0.01; // De cm a metros
+            } else {
+                console.log("El modelo ya está en METROS.");
+                scaleFactor = 1; // Mantener igual
+            }
+
+            model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            return scaleFactor;
         }
 
-        function exportUSDZ(model) {
+        function exportUSDZ(model, scaleFactor) {
             console.log("Iniciando exportación a USDZ...");
 
-            applyScaleToGeometry(model); // Asegurar que la escala es parte de la geometría antes de exportar
+            applyScaleToGeometry(model, scaleFactor);
 
             const exporter = new THREE.USDZExporter();
             exporter.parse(model).then(function (arraybuffer) {
@@ -100,6 +110,16 @@
             }).catch(function (error) {
                 console.error("Error al exportar a USDZ:", error);
                 alert("Error al convertir a USDZ. Revisa la consola.");
+            });
+        }
+
+        function applyScaleToGeometry(model, scaleFactor) {
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    console.log(`Aplicando escala permanente a la geometría con factor: ${scaleFactor}`);
+                    child.geometry.applyMatrix4(new THREE.Matrix4().makeScale(scaleFactor, scaleFactor, scaleFactor));
+                    child.scale.set(1, 1, 1);
+                }
             });
         }
     </script>
