@@ -16,11 +16,10 @@
     <script src="https://cdn.jsdelivr.net/npm/three/examples/js/exporters/USDZExporter.js"></script>
 
     <script>
-        document.getElementById('glb-file').addEventListener('change', function(event) {
-            convertToUSDZ(event.target.files[0]);
-        });
+        function convertToUSDZ() {
+            const fileInput = document.getElementById('glb-file');
+            const file = fileInput.files[0];
 
-        function convertToUSDZ(file) {
             if (!file) {
                 alert("Por favor, selecciona un archivo GLB.");
                 return;
@@ -37,14 +36,10 @@
 
                     ensureUVs(scene); // Generar UVs si faltan
 
-                    // Escalar modelo a tamaño real
-                    const scaleFactor = scaleModelToRealSize(scene);
+                    const scaleFactor = detectUnitAndAdjustScale(scene);
+                    console.log(`Factor de escala aplicado: ${scaleFactor}`);
 
-                    // Aplicar la escala directamente a la geometría
-                    applyScaleToGeometry(scene, scaleFactor);
-
-                    // Exportar y descargar el USDZ automáticamente
-                    exportUSDZ(scene);
+                    exportUSDZ(scene, scaleFactor);
                 }, function(error) {
                     console.error("Error al cargar GLB:", error);
                 });
@@ -68,7 +63,7 @@
             });
         }
 
-        function scaleModelToRealSize(model) {
+        function detectUnitAndAdjustScale(model) {
             const boundingBox = new THREE.Box3().setFromObject(model);
             const size = boundingBox.getSize(new THREE.Vector3());
             console.log("Tamaño detectado del modelo (x, y, z):", size);
@@ -86,21 +81,14 @@
                 scaleFactor = 1; // Mantener igual
             }
 
+            model.scale.set(scaleFactor, scaleFactor, scaleFactor);
             return scaleFactor;
         }
 
-        function applyScaleToGeometry(model, scaleFactor) {
-            model.traverse((child) => {
-                if (child.isMesh) {
-                    console.log(`Aplicando escala permanente a la geometría con factor: ${scaleFactor}`);
-                    child.geometry.applyMatrix4(new THREE.Matrix4().makeScale(scaleFactor, scaleFactor, scaleFactor));
-                    child.scale.set(1, 1, 1);
-                }
-            });
-        }
-
-        function exportUSDZ(model) {
+        function exportUSDZ(model, scaleFactor) {
             console.log("Iniciando exportación a USDZ...");
+
+            applyScaleToGeometry(model, scaleFactor);
 
             const exporter = new THREE.USDZExporter();
             exporter.parse(model).then(function (arraybuffer) {
@@ -124,14 +112,25 @@
                 alert("Error al convertir a USDZ. Revisa la consola.");
             });
         }
+
+        function applyScaleToGeometry(model, scaleFactor) {
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    console.log(`Aplicando escala permanente a la geometría con factor: ${scaleFactor}`);
+                    child.geometry.applyMatrix4(new THREE.Matrix4().makeScale(scaleFactor, scaleFactor, scaleFactor));
+                    child.scale.set(1, 1, 1);
+                }
+            });
+        }
     </script>
 </head>
 <body>
     <h1>Conversión de GLB a USDZ</h1>
-    <p>Selecciona un archivo GLB y la conversión iniciará automáticamente</p>
+    <p>Selecciona un archivo GLB y conviértelo a USDZ</p>
 
     <div>
         <input type="file" id="glb-file" accept=".glb">
+        <button onclick="convertToUSDZ()">Convertir a USDZ</button>
     </div>
 </body>
 </html>
