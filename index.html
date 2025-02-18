@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conversión de GLB a USDZ</title>
 
-    <!-- Cargar Three.js desde un CDN confiable -->
+    <!-- Cargar Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-    <!-- Cargar fflate.js (requerido por USDZExporter) -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fflate/0.7.4/fflate.min.js"></script>
+    <!-- Cargar dependencias necesarias -->
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.8.0/umd/index.js"></script> <!-- Corrige error de fflate -->
 
     <!-- Cargar GLTFLoader y USDZExporter -->
     <script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
@@ -34,14 +34,12 @@
                     const scene = gltf.scene;
                     console.log("GLB cargado en la escena.");
 
-                    // Verificar si el modelo tiene coordenadas UV
-                    scene.traverse((child) => {
-                        if (child.isMesh && !child.geometry.attributes.uv) {
-                            console.warn("El modelo no tiene coordenadas UV, lo que puede afectar la conversión a USDZ.");
-                        }
-                    });
+                    ensureUVs(scene); // Generar UVs si faltan
 
-                    exportUSDZ(scene);
+                    const scaleFactor = detectUnitAndAdjustScale(scene);
+                    console.log(`Factor de escala aplicado: ${scaleFactor}`);
+
+                    exportUSDZ(scene, scaleFactor);
                 }, function(error) {
                     console.error("Error al cargar GLB:", error);
                 });
@@ -50,11 +48,50 @@
             reader.readAsArrayBuffer(file);
         }
 
-        function exportUSDZ(model) {
-            console.log("Iniciando exportación a USDZ...");
-            const exporter = new THREE.USDZExporter();
+        function ensureUVs(model) {
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    if (!child.geometry.attributes.uv) {
+                        console.warn("El modelo no tiene coordenadas UV. Generando UVs básicas...");
+                        const uvAttribute = new Float32Array(child.geometry.attributes.position.count * 2);
+                        for (let i = 0; i < uvAttribute.length; i++) {
+                            uvAttribute[i] = (i % 2 === 0) ? 0 : 1; // UVs básicas
+                        }
+                        child.geometry.setAttribute('uv', new THREE.BufferAttribute(uvAttribute, 2));
+                    }
+                }
+            });
+        }
 
-            exporter.parse(model).then(function(arraybuffer) {
+        function detectUnitAndAdjustScale(model) {
+            const boundingBox = new THREE.Box3().setFromObject(model);
+            const size = boundingBox.getSize(new THREE.Vector3());
+            console.log("Tamaño detectado del modelo (x, y, z):", size);
+
+            let scaleFactor = 1;
+
+            if (size.y > 1000) {
+                console.log("El modelo está en MILÍMETROS. Convertimos a metros.");
+                scaleFactor = 0.001; // De mm a metros
+            } else if (size.y > 100) {
+                console.log("El modelo está en CENTÍMETROS. Convertimos a metros.");
+                scaleFactor = 0.01; // De cm a metros
+            } else {
+                console.log("El modelo ya está en METROS.");
+                scaleFactor = 1; // Mantener igual
+            }
+
+            model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            return scaleFactor;
+        }
+
+        function exportUSDZ(model, scaleFactor) {
+            console.log("Iniciando exportación a USDZ...");
+
+            applyScaleToGeometry(model, scaleFactor);
+
+            const exporter = new THREE.USDZExporter();
+            exporter.parse(model).then(function (arraybuffer) {
                 console.log("USDZ exportado correctamente.");
 
                 const blob = new Blob([arraybuffer], { type: "model/vnd.usdz+zip" });
@@ -62,18 +99,27 @@
 
                 console.log("URL del archivo USDZ generado:", url);
 
-                // Crear un enlace de descarga
-                const downloadLink = document.createElement('a');
+                const downloadLink = document.createElement("a");
                 downloadLink.href = url;
-                downloadLink.download = 'modelo_convertido.usdz';
+                downloadLink.download = "modelo_convertido.usdz";
                 document.body.appendChild(downloadLink);
                 downloadLink.click();
                 document.body.removeChild(downloadLink);
 
                 alert("Modelo USDZ exportado y descargado correctamente.");
-            }).catch(function(error) {
+            }).catch(function (error) {
                 console.error("Error al exportar a USDZ:", error);
                 alert("Error al convertir a USDZ. Revisa la consola.");
+            });
+        }
+
+        function applyScaleToGeometry(model, scaleFactor) {
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    console.log(`Aplicando escala permanente a la geometría con factor: ${scaleFactor}`);
+                    child.geometry.applyMatrix4(new THREE.Matrix4().makeScale(scaleFactor, scaleFactor, scaleFactor));
+                    child.scale.set(1, 1, 1);
+                }
             });
         }
     </script>
